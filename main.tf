@@ -1,166 +1,144 @@
 provider "aws" {
-  region = "us-east-1"
-  
+  profile = "default"
+  region  = "us-east-1"
 }
 
-# Main VPC
-resource "aws_vpc" "my-vpc" {
-  cidr_block = "192.168.0.0/16"
+resource "aws_vpc" "my_custom_vpc" {
+  cidr_block = "10.0.0.0/16"
 
   tags = {
-    Name = "my-vpc"
+    Name = "my Custom VPC"
   }
 }
-# Public Subnet
-resource "aws_subnet" "public" {
-  vpc_id     = aws_vpc.my-vpc.id
-  cidr_block = "192.168.1.0/24"
+
+resource "aws_subnet" "public_subnet" {
+  vpc_id            = aws_vpc.my_custom_vpc.id
+  cidr_block        = "10.0.1.0/24"
+  availability_zone = "us-east-1a"
 
   tags = {
     Name = "Public Subnet"
   }
 }
-# Private Subnet
-resource "aws_subnet" "private" {
-  vpc_id     = aws_vpc.my-vpc.id
-  cidr_block = "192.168.3.0/24"
+
+resource "aws_subnet" "private_subnet" {
+  vpc_id            = aws_vpc.my_custom_vpc.id
+  cidr_block        = "10.0.2.0/24"
+  availability_zone = "us-east-1a"
 
   tags = {
-    Name = "private Subnet"
+    Name = "Private Subnet"
   }
 }
-#Internat Gateway
-resource "aws_internet_gateway" "igw" {
-  vpc_id = aws_vpc.my-vpc.id
+
+resource "aws_internet_gateway" "some_ig" {
+  vpc_id = aws_vpc.my_custom_vpc.id
 
   tags = {
-    Name = "my-vpc IGW"
+    Name = "Some Internet Gateway"
   }
 }
-# Elastic IP 
-resource "aws_eip" "nat_eip" {
-  vpc        = true
-  depends_on = [aws_internet_gateway.igw]
-  tags = {
-    Name = "NAT Gateway EIP"
-  }
-}
-# NAT Gateway
-resource "aws_nat_gateway" "nat" {
-  allocation_id = aws_eip.nat_eip.id
-  subnet_id     = aws_subnet.public.id
 
-  tags = {
-    Name = "my-vpc NAT Gateway"
-  }
-}
-# Route Table
-resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.my-vpc.id
+resource "aws_route_table" "public_rt" {
+  vpc_id = aws_vpc.my_custom_vpc.id
 
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.igw.id
+    gateway_id = aws_internet_gateway.some_ig.id
+  }
+
+  route {
+    ipv6_cidr_block = "::/0"
+    gateway_id      = aws_internet_gateway.some_ig.id
   }
 
   tags = {
     Name = "Public Route Table"
   }
 }
-# Association between Public Subnet and Public Route Table
-resource "aws_route_table_association" "public" {
-  subnet_id      = aws_subnet.public.id
-  route_table_id = aws_route_table.public.id
+
+resource "aws_route_table_association" "public_1_rt_a" {
+  subnet_id      = aws_subnet.public_subnet.id
+  route_table_id = aws_route_table.public_rt.id
 }
-# Route Table for Private Subnet
-resource "aws_route_table" "private" {
-  vpc_id = aws_vpc.my-vpc.id
+resource "aws_route_table" "private_rt" {
+  vpc_id = aws_vpc.my_custom_vpc.id
 
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_nat_gateway.nat.id
+    gateway_id = aws_internet_gateway.some_ig.id
+  }
+
+  route {
+    ipv6_cidr_block = "::/0"
+    gateway_id      = aws_internet_gateway.some_ig.id
   }
 
   tags = {
     Name = "Private Route Table"
   }
 }
-# Private Subnet and Private Route Table
-resource "aws_route_table_association" "private" {
-  subnet_id      = aws_subnet.private.id
-  route_table_id = aws_route_table.private.id
+
+resource "aws_route_table_association" "private_1_rt_a" {
+  subnet_id      = aws_subnet.private_subnet.id
+  route_table_id = aws_route_table.private_rt.id
 }
 
-# creating  security gruop using terraform
-
-resource "aws_security_group" "TF_SG" {
-  name        = "security gruop using terraform"
-  description = "security gruop using terraform"
-  vpc_id      = aws_vpc.my-vpc.id
+resource "aws_security_group" "web_sg" {
+  name   = "HTTP and SSH"
+  vpc_id = aws_vpc.my_custom_vpc.id
 
   ingress {
-    description      = "SSH"
-    from_port        = 22
-    to_port          = 22
-    protocol         = "tcp"
-    cidr_blocks      = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = ["::/0"]
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
-
-  ingress {
-    description      = "HTTP"
-    from_port        = 80
-    to_port          = 80
-    protocol         = "tcp"
-    cidr_blocks      = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = ["::/0"]
+    ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
-
-  ingress {
-    description      = "WEBSERVER"
-    from_port        = 8080
-    to_port          = 8080
-    protocol         = "tcp"
-    cidr_blocks      = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = ["::/0"]
+    ingress {
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
-
   ingress {
-    description      = "MYSQL"
-    from_port        = 3306
-    to_port          = 3306
-    protocol         = "tcp"
-    cidr_blocks      = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = ["::/0"]
+    from_port   = 3306
+    to_port     = 3306
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
-    from_port        = 0
-    to_port          = 0
-    protocol         = "-1"
-    cidr_blocks      = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = ["::/0"]
+    from_port   = 0
+    to_port     = 0
+    protocol    = -1
+    cidr_blocks = ["0.0.0.0/0"]
   }
-
-  tags = {
-    Name = "TF_SG"
-  }
+    tags = {
+    Name = "mysecurity"
+  } 
 }
-# creating a ec2instance
 
-resource "aws_instance" "my-ec2" {
+resource "aws_instance" "web_instance" {
   ami           = "ami-0574da719dca65348"
   instance_type = "t2.micro"
-  subnet_id = "${aws_subnet.public.id}"
-  security_groups = ["aws_security_group.mysecurity.name"]
+  key_name      = "terraform"
 
+  subnet_id                   = aws_subnet.public_subnet.id
+  vpc_security_group_ids      = [aws_security_group.web_sg.id]
+  associate_public_ip_address = true
 tags = {
   Name = "terrafromlearning"
   }
 }
 # creating ebs volume
 resource "aws_ebs_volume" "volume-1" {
- availability_zone = "us-east-1b"
+ availability_zone = "us-east-1a"
  type = "gp2"
  size = 8
  tags = {
@@ -173,7 +151,6 @@ resource "aws_ebs_volume" "volume-1" {
 resource "aws_volume_attachment" "volume-1-attachment" {
  device_name = "/dev/xvdh"
  volume_id = "${aws_ebs_volume.volume-1.id}"
- instance_id = "${aws_instance.my-ec2.id}"
+ instance_id = "${aws_instance.web_instance.id}"
 }
-
 
