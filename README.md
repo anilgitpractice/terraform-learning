@@ -30,7 +30,6 @@ wget https://releases.hashicorp.com/terraform/1.3.6/terraform_1.3.6_linux_amd64.
   ```
   mv terraform /usr/local/bin
   ```
-  
   - If it is installed successfully or not check by passing below command.
   ```
   terrform  version
