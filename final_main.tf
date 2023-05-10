@@ -74,9 +74,12 @@ resource "aws_security_group" "web_sg" {
 resource "aws_instance" "web_instance" {
   ami           = "ami-0a695f0d95cefc163"
   instance_type = "t2.micro"
-  key_name      = "jenkins"
+  key_name      = "trackrat-dev-ubuntu"
   subnet_id              = aws_default_subnet.default_az1.id
   vpc_security_group_ids = [aws_security_group.web_sg.id]
+tags = {
+  Name = "trackrat-dev-ubuntu"
+}
 
 }
 # an empty resource block
@@ -86,7 +89,7 @@ resource "null_resource" "name" {
   connection {
     type        = "ssh"
     user        = "ubuntu"
-    private_key = file("./jenkins.pem")
+    private_key = file("./trackrat-dev-ubuntu.pem")
     host        = aws_instance.web_instance.public_ip
   }
 
