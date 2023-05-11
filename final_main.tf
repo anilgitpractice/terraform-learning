@@ -1,7 +1,7 @@
 # configured aws provider with proper credentials
 provider "aws" {
-  region    = "us-east-2"
-  profile   = "default"
+  region    = var.region
+  profile   = var.profile
 }
 
 
@@ -40,7 +40,6 @@ resource "aws_security_group" "web_sg" {
     protocol         = "tcp"
     cidr_blocks      = ["0.0.0.0/0"]
   }
-
   # allow access on port 8080
   ingress {
     description      = "jenkins port"
@@ -67,18 +66,18 @@ resource "aws_security_group" "web_sg" {
   }
 
   tags   = {
-    Name = "jenkins server security group"
+    Name = "tracrat-dev-security_group"
   }
 }
 # launch the ec2 instance and install website
 resource "aws_instance" "web_instance" {
-  ami           = "ami-0a695f0d95cefc163"
-  instance_type = "t2.micro"
-  key_name      = "trackrat-dev-ubuntu"
+  ami           = var.ami
+  instance_type = var.instance_type
+  key_name      = var.key_name
   subnet_id              = aws_default_subnet.default_az1.id
   vpc_security_group_ids = [aws_security_group.web_sg.id]
 tags = {
-  Name = "trackrat-dev-ubuntu"
+  Name = var.tag
 }
 
 }
@@ -89,21 +88,21 @@ resource "null_resource" "name" {
   connection {
     type        = "ssh"
     user        = "ubuntu"
-    private_key = file("./trackrat-dev-ubuntu.pem")
+    private_key = file(var.private_key_file)
     host        = aws_instance.web_instance.public_ip
   }
 
-  # copy the install_jenkins.sh file from your computer to the ec2 instance
+  # copy the install_tools.sh file from your computer to the ec2 instance
   provisioner "file" {
-    source      = "./install_jenkins.sh"
-    destination = "/tmp/install_jenkins.sh"
+    source      = var.source_file
+    destination = var.destination
   }
 
-  # set permissions and run the install_jenkins.sh file
+  # set permissions and run the install_tools.sh file
   provisioner "remote-exec" {
     inline = [
-      "sudo chmod +x /tmp/install_jenkins.sh",
-      "sh /tmp/install_jenkins.sh",
+      "sudo chmod +x /tmp/install_tools.sh",
+      "sh /tmp/install_tools.sh",
     ]
   }
 
