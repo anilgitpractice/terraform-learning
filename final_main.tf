@@ -66,7 +66,7 @@ resource "aws_security_group" "web_sg" {
   }
 
   tags   = {
-    Name = "tracrat-dev-security_group"
+    Name = "my-dev-security_group"
   }
 }
 # launch the ec2 instance and install website
